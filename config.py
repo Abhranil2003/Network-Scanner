@@ -11,3 +11,14 @@ SOCKET_TIMEOUT = 1
 
 # Verbosity level (True for detailed output, False for minimal output)
 VERBOSE = False
+
+# Function to override default configurations (optional)
+def set_custom_config(ip_range=None, ports=None, verbose=None):
+    global DEFAULT_IP_RANGE, DEFAULT_PORTS, VERBOSE
+
+    if ip_range:
+        DEFAULT_IP_RANGE = ip_range
+    if ports:
+        DEFAULT_PORTS = ports
+    if verbose is not None:
+        VERBOSE = verbose
