@@ -2,35 +2,39 @@ import argparse
 from network_scanner import scan_network
 from port_scanner import scan_ports
 from visualization import display_table
-from config import DEFAULT_PORTS, DEFAULT_IP_RANGE, VERBOSE
+from config import DEFAULT_PORTS, VERBOSE, set_custom_config
 from utils import validate_ip_range, validate_port_list, parse_port_list, print_verbose
 
 def main():
     # Argument parser for user inputs
     parser = argparse.ArgumentParser(description="Network Scanner: Scan a network for active hosts and open ports.")
-    parser.add_argument("-r", "--range", type=str, help="IP range to scan (e.g., 192.168.1.1/24).", default=DEFAULT_IP_RANGE)
+    parser.add_argument("-r", "--range", type=str, help="IP range to scan (e.g., 192.168.1.1/24).", default=None)
     parser.add_argument("-p", "--ports", type=str, help="Comma-separated list of ports to scan (e.g., 22,80,443).", default=",".join(map(str, DEFAULT_PORTS)))
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output for detailed logging.")
 
     args = parser.parse_args()
-    ip_range = args.range
+
+    # Set custom configurations based on user input
+    ip_range = args.range if args.range else "192.168.1.1/24"  # Default IP range if not provided
     ports_string = args.ports
     verbose = args.verbose
+
+    # Set configurations dynamically
+    set_custom_config(ip_range=ip_range, ports=parse_port_list(ports_string), verbose=verbose)
 
     # Validate IP range
     if not validate_ip_range(ip_range):
         print("Invalid IP range format. Please provide a valid CIDR format (e.g., 192.168.1.1/24).")
         return
 
-    # Parse and validate ports
-    ports = parse_port_list(ports_string)
-    if not validate_port_list(ports):
+    # Validate ports
+    if not validate_port_list(DEFAULT_PORTS):
         print("Invalid port numbers. Please provide valid port numbers between 1 and 65535.")
         return
 
     # Verbose logging
     print_verbose(f"Scanning network: {ip_range}", verbose)
-    print_verbose(f"Scanning ports: {ports}", verbose)
+    print_verbose(f"Scanning ports: {DEFAULT_PORTS}", verbose)
     
     # Step 1: Scan network for active hosts
     print_verbose(f"Sending ARP requests to the IP range: {ip_range}", verbose)
@@ -47,7 +51,7 @@ def main():
     results = []
     for host in active_hosts:
         ip = host['ip']
-        open_ports = scan_ports(ip, ports)
+        open_ports = scan_ports(ip, DEFAULT_PORTS)
         results.append({'IP': ip, 'MAC': host['mac'], 'Open Ports': open_ports})
     
     # Step 3: Display results
