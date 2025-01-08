@@ -18,7 +18,7 @@ def set_custom_config(ip_range=None, ports=None, verbose=None):
 
     if ip_range:
         DEFAULT_IP_RANGE = ip_range
-    if ports:
+    if ports is not None:
         DEFAULT_PORTS = ports
     if verbose is not None:
         VERBOSE = verbose
