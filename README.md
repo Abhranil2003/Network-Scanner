@@ -27,7 +27,9 @@ pip install scapy tabulate
 ├── port_scanner.py       # Handles port scanning
 ├── visualization.py      # Handles visualization of results
 ├── config.py             # Configuration file for default settings
-└── utils.py              # Utility functions for validation and logging
+├── utils.py              # Utility functions for validation and logging
+├── LICENSE               # License for the project
+└── README.md             # Project documentation
 ```
 
 ## Usage
@@ -122,5 +124,27 @@ SOCKET_TIMEOUT = 1
 VERBOSE = False
 ```
 
-## License
-This project is licensed under the BSD-3-Clause License. See the LICENSE file for details.
+## 🐜 License
+
+This project is licensed under the BSD 3-Clause License. See the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! To contribute:
+1. Fork the repository.
+2. Create a new branch for your feature/bug fix.
+3. Submit a pull request with a detailed description of changes.
+
+---
+
+## 💬 Feedback
+
+We welcome your feedback! If you encounter any issues or have suggestions for improvement, feel free to open an issue or contribute to the project.
+
+### How to Provide Feedback:
+1. **Open an Issue**: If you find a bug or have an enhancement suggestion, please open an issue in the [GitHub repository](https://github.com/your-username/NetworkScanner/issues).
+2. **Submit a Pull Request**: If you've fixed a bug or added a new feature, submit a pull request for review. Please follow the contribution guidelines outlined below.
+
+Thank you!
