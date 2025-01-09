@@ -27,7 +27,7 @@ pip install scapy tabulate
 ├── port_scanner.py       # Handles port scanning
 ├── visualization.py      # Handles visualization of results
 ├── config.py             # Configuration file for default settings
-├── utils.py              # Utility functions for validation and logging
+└── utils.py              # Utility functions for validation and logging
 ```
 
 ## Usage
