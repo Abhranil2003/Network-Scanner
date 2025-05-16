@@ -1,4 +1,4 @@
-from scapy.all import ARP, Ether, srp
+from scapy.all import ARP, Ether, srp # type: ignore
 
 def scan_network(ip_range):
     """
