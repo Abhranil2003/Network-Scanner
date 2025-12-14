@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 from network_scanner import scan_network
 from port_scanner import scan_ports
 from utils import validate_ip_range, validate_port_list
-from config import DEFAULT_PORTS
 
 from database import SessionLocal
 from models import Scan, Host, OpenPort
@@ -17,7 +16,7 @@ from models import Scan, Host, OpenPort
 app = FastAPI(
     title="Live Network Scanner",
     description="FastAPI-based live network scanning service",
-    version="2.0.0"
+    version="2.1.0"
 )
 
 # -------------------- DB Dependency --------------------
@@ -33,7 +32,7 @@ def get_db():
 
 class ScanRequest(BaseModel):
     ip_range: str
-    ports: Optional[List[int]] = DEFAULT_PORTS
+    ports: Optional[List[int]] = [22, 80, 443]
 
 class ScanResponse(BaseModel):
     scan_id: int
