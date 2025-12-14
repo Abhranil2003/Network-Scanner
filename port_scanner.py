@@ -1,28 +1,34 @@
 import socket
+from typing import List
 
-def scan_ports(host, ports):
+def scan_ports(host: str, ports: List[int], timeout: int = 1) -> List[int]:
     """
     Scans a list of ports on a given host to identify open ports.
 
     Args:
-        host (str): The target host IP address.
-        ports (list): A list of port numbers to scan.
+        host (str): Target host IP address.
+        ports (List[int]): List of port numbers to scan.
+        timeout (int): Socket timeout in seconds.
 
     Returns:
-        list: A list of open ports.
+        List[int]: List of open ports.
     """
-    print(f"Scanning ports on host: {host}")
-    open_ports = []
-    
+
+    open_ports: List[int] = []
+
     for port in ports:
         try:
-            # Create a socket object
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.settimeout(1)  # Timeout for connection attempt
-                result = s.connect_ex((host, port))  # Attempt to connect to the port
-                if result == 0:  # Port is open
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.settimeout(timeout)
+                if sock.connect_ex((host, port)) == 0:
                     open_ports.append(port)
-        except Exception as e:
-            print(f"Error scanning port {port} on {host}: {e}")
-    
+
+        except socket.timeout:
+            # Port filtered or unresponsive – ignore safely
+            continue
+
+        except OSError:
+            # Host unreachable or invalid socket state
+            continue
+
     return open_ports
