@@ -11,6 +11,10 @@ class Scan(Base):
     id = Column(Integer, primary_key=True, index=True)
     ip_range = Column(String, nullable=False)
     ports_scanned = Column(String, nullable=False)
+
+    # NEW: scan status for background processing
+    status = Column(String, default="pending", nullable=False)
+
     created_at = Column(DateTime, default=datetime.utcnow)
 
     hosts = relationship(
@@ -24,7 +28,7 @@ class Host(Base):
     __tablename__ = "hosts"
 
     id = Column(Integer, primary_key=True, index=True)
-    scan_id = Column(Integer, ForeignKey("scans.id"))
+    scan_id = Column(Integer, ForeignKey("scans.id", ondelete="CASCADE"))
     ip_address = Column(String, nullable=False)
     mac_address = Column(String, nullable=False)
 
@@ -40,7 +44,7 @@ class OpenPort(Base):
     __tablename__ = "open_ports"
 
     id = Column(Integer, primary_key=True, index=True)
-    host_id = Column(Integer, ForeignKey("hosts.id"))
+    host_id = Column(Integer, ForeignKey("hosts.id", ondelete="CASCADE"))
     port = Column(Integer, nullable=False)
 
     host = relationship("Host", back_populates="open_ports")
