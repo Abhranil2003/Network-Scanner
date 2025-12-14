@@ -1,84 +1,129 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
 from typing import List, Optional
+
+from sqlalchemy.orm import Session
 
 from network_scanner import scan_network
 from port_scanner import scan_ports
 from utils import validate_ip_range, validate_port_list
 from config import DEFAULT_PORTS
 
-import csv
+from database import SessionLocal
+from models import Scan, Host, OpenPort
+
+# -------------------- App --------------------
 
 app = FastAPI(
     title="Live Network Scanner",
     description="FastAPI-based live network scanning service",
-    version="1.0.0"
+    version="2.0.0"
 )
+
+# -------------------- DB Dependency --------------------
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 # -------------------- Schemas --------------------
 
 class ScanRequest(BaseModel):
     ip_range: str
     ports: Optional[List[int]] = DEFAULT_PORTS
-    save_format: Optional[str] = None  # "txt" or "csv"
-    output_filename: Optional[str] = "scan_results"
-
-class HostResult(BaseModel):
-    ip: str
-    mac: str
-    open_ports: List[int]
 
 class ScanResponse(BaseModel):
-    results: List[HostResult]
-
-# -------------------- Helper --------------------
-
-def save_results_to_file(results, file_format, filename):
-    file_path = f"{filename}.{file_format}"
-
-    if file_format == "txt":
-        with open(file_path, "w") as file:
-            file.write("IP Address\tMAC Address\tOpen Ports\n")
-            for r in results:
-                file.write(f"{r['ip']}\t{r['mac']}\t{','.join(map(str, r['open_ports']))}\n")
-
-    elif file_format == "csv":
-        with open(file_path, "w", newline="") as file:
-            writer = csv.writer(file)
-            writer.writerow(["IP Address", "MAC Address", "Open Ports"])
-            for r in results:
-                writer.writerow([r["ip"], r["mac"], ",".join(map(str, r["open_ports"]))])
+    scan_id: int
+    message: str
 
 # -------------------- API --------------------
 
 @app.post("/scan", response_model=ScanResponse)
-def start_scan(request: ScanRequest):
+def start_scan(request: ScanRequest, db: Session = Depends(get_db)):
 
-    # Validate IP range
+    # Validate input
     if not validate_ip_range(request.ip_range):
         raise HTTPException(status_code=400, detail="Invalid IP range format")
 
-    # Validate ports
     if not validate_port_list(request.ports):
         raise HTTPException(status_code=400, detail="Invalid port list")
 
-    # Step 1: Network scan
-    active_hosts = scan_network(request.ip_range)
-    if not active_hosts:
-        return {"results": []}
+    # 1️⃣ Create scan entry
+    scan = Scan(
+        ip_range=request.ip_range,
+        ports_scanned=",".join(map(str, request.ports))
+    )
+    db.add(scan)
+    db.commit()
+    db.refresh(scan)
 
-    # Step 2: Port scan
-    results = []
+    # 2️⃣ Network scan
+    active_hosts = scan_network(request.ip_range)
+
+    # 3️⃣ Save hosts & ports
     for host in active_hosts:
+        host_obj = Host(
+            scan_id=scan.id,
+            ip_address=host["ip"],
+            mac_address=host["mac"]
+        )
+        db.add(host_obj)
+        db.commit()
+        db.refresh(host_obj)
+
         open_ports = scan_ports(host["ip"], request.ports)
+        for port in open_ports:
+            db.add(OpenPort(
+                host_id=host_obj.id,
+                port=port
+            ))
+
+    db.commit()
+
+    return {
+        "scan_id": scan.id,
+        "message": "Scan completed and saved successfully"
+    }
+
+# -------------------- RESULTS APIs --------------------
+
+@app.get("/results/{scan_id}")
+def get_scan_results(scan_id: int, db: Session = Depends(get_db)):
+
+    scan = db.query(Scan).filter(Scan.id == scan_id).first()
+
+    if not scan:
+        raise HTTPException(status_code=404, detail="Scan not found")
+
+    results = []
+    for host in scan.hosts:
         results.append({
-            "ip": host["ip"],
-            "mac": host["mac"],
-            "open_ports": open_ports
+            "ip": host.ip_address,
+            "mac": host.mac_address,
+            "open_ports": [p.port for p in host.open_ports]
         })
 
-    # Step 3: Optional file save
-    if request.save_format in ["txt", "csv"]:
-        save_results_to_file(results, request.save_format, request.output_filename)
+    return {
+        "scan_id": scan.id,
+        "ip_range": scan.ip_range,
+        "ports_scanned": scan.ports_scanned,
+        "created_at": scan.created_at,
+        "results": results
+    }
 
-    return {"results": results}
+@app.get("/results")
+def list_scans(db: Session = Depends(get_db)):
+    scans = db.query(Scan).all()
+
+    return [
+        {
+            "scan_id": scan.id,
+            "ip_range": scan.ip_range,
+            "ports_scanned": scan.ports_scanned,
+            "created_at": scan.created_at
+        }
+        for scan in scans
+    ]
