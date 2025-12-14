@@ -1,22 +1,21 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
 from pydantic import BaseModel
 from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
-from network_scanner import scan_network
-from port_scanner import scan_ports
 from utils import validate_ip_range, validate_port_list
-
 from database import SessionLocal
 from models import Scan, Host, OpenPort
+
+from tasks import run_scan
 
 # -------------------- App --------------------
 
 app = FastAPI(
     title="Live Network Scanner",
     description="FastAPI-based live network scanning service",
-    version="2.1.0"
+    version="2.2.0"
 )
 
 # -------------------- DB Dependency --------------------
@@ -41,8 +40,11 @@ class ScanResponse(BaseModel):
 # -------------------- API --------------------
 
 @app.post("/scan", response_model=ScanResponse)
-def start_scan(request: ScanRequest, db: Session = Depends(get_db)):
-
+def start_scan(
+    request: ScanRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
     # Validate input
     if not validate_ip_range(request.ip_range):
         raise HTTPException(status_code=400, detail="Invalid IP range format")
@@ -50,41 +52,27 @@ def start_scan(request: ScanRequest, db: Session = Depends(get_db)):
     if not validate_port_list(request.ports):
         raise HTTPException(status_code=400, detail="Invalid port list")
 
-    # 1️⃣ Create scan entry
+    # 1️⃣ Create scan entry (PENDING)
     scan = Scan(
         ip_range=request.ip_range,
-        ports_scanned=",".join(map(str, request.ports))
+        ports_scanned=",".join(map(str, request.ports)),
+        status="pending"
     )
     db.add(scan)
     db.commit()
     db.refresh(scan)
 
-    # 2️⃣ Network scan
-    active_hosts = scan_network(request.ip_range)
-
-    # 3️⃣ Save hosts & ports
-    for host in active_hosts:
-        host_obj = Host(
-            scan_id=scan.id,
-            ip_address=host["ip"],
-            mac_address=host["mac"]
-        )
-        db.add(host_obj)
-        db.commit()
-        db.refresh(host_obj)
-
-        open_ports = scan_ports(host["ip"], request.ports)
-        for port in open_ports:
-            db.add(OpenPort(
-                host_id=host_obj.id,
-                port=port
-            ))
-
-    db.commit()
+    # 2️⃣ Run scan in background
+    background_tasks.add_task(
+        run_scan,
+        scan.id,
+        request.ip_range,
+        request.ports
+    )
 
     return {
         "scan_id": scan.id,
-        "message": "Scan completed and saved successfully"
+        "message": "Scan started in background"
     }
 
 # -------------------- RESULTS APIs --------------------
@@ -107,6 +95,7 @@ def get_scan_results(scan_id: int, db: Session = Depends(get_db)):
 
     return {
         "scan_id": scan.id,
+        "status": scan.status,
         "ip_range": scan.ip_range,
         "ports_scanned": scan.ports_scanned,
         "created_at": scan.created_at,
@@ -120,6 +109,7 @@ def list_scans(db: Session = Depends(get_db)):
     return [
         {
             "scan_id": scan.id,
+            "status": scan.status,
             "ip_range": scan.ip_range,
             "ports_scanned": scan.ports_scanned,
             "created_at": scan.created_at
