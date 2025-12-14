@@ -2,163 +2,239 @@
 
 ## Overview
 
-This project is a Network Scanner tool that scans a network for active hosts and identifies open ports. The tool is implemented in Python and uses libraries like `scapy` and `socket`. It provides functionality to visualize results in a user-friendly format and save the output to a file.
+Live Network Scanner is a **full-stack, cloud-deployed network scanning application** built with **FastAPI**. It allows users to initiate network scans, track scan progress asynchronously, and view results through a web-based dashboard or REST APIs.
 
-## Features
+The project evolved from a CLI-based scanner into a **production-style backend system** featuring background task processing, persistent storage, and a user-friendly UI.
 
-- Scan a network for active hosts using ARP requests.
-- Identify open ports on active hosts using socket connections.
-- Save scan results to a `.txt` or `.csv` file.
-- User-friendly table visualization of results.
-- Support for user-defined IP ranges and port lists.
-- Verbose mode for detailed output.
+---
+
+## Key Features
+
+- 🚀 **FastAPI-based REST API** with Swagger documentation
+- 🔄 **Asynchronous background scans** (non-blocking API)
+- 📊 **Web dashboard UI** for scan initiation and monitoring
+- 🗂 **SQLite + SQLAlchemy ORM** for persistent storage
+- 📈 **Scan status tracking** (`pending`, `running`, `completed`, `failed`)
+- 🌐 **Public cloud deployment (Render)**
+- 🧪 Fully tested locally and in cloud environment
+
+---
 
 ## Prerequisites
 
-Ensure you have Python 3.7 or later installed. Install the required Python libraries:
+Before running or contributing to this project, ensure you have the following installed:
 
-```bash
-pip install scapy tabulate
-```
+- **Python 3.9 or later**
+- **pip** (Python package manager)
+- **Git** (for cloning the repository)
+- **Npcap / libpcap** (required for ARP scanning on local machines)
+- A system with **administrator/root privileges** (for local ARP scans)
 
-## File Structure
+> ⚠️ Note: ARP-based network scanning works only on local machines. In cloud deployments, this feature is safely disabled.
+
+---
+
+## Technology Stack
+
+| Layer | Technologies |
+|-----|-------------|
+| Backend | FastAPI, Python |
+| Async Processing | FastAPI BackgroundTasks |
+| Database | SQLite, SQLAlchemy |
+| Networking | Scapy, Socket |
+| Frontend | HTML, CSS, JavaScript |
+| Deployment | Render |
+
+---
+
+## Project Structure
 
 ```
 .
-├── main.py               # Entry point of the application
-├── network_scanner.py    # Handles network scanning (ARP requests)
-├── port_scanner.py       # Handles port scanning
-├── visualization.py      # Handles visualization of results
-├── config.py             # Configuration file for default settings
-├── utils.py              # Utility functions for validation and logging
-├── LICENSE               # License for the project
-└── README.md             # Project documentation
+├── main.py               # FastAPI application entry point
+├── tasks.py              # Background scan worker
+├── models.py             # Database models
+├── database.py           # Database configuration
+├── network_scanner.py    # ARP-based network scanning
+├── port_scanner.py       # TCP port scanning
+├── utils.py              # Validation utilities
+├── templates/
+│   └── index.html        # Web dashboard UI
+├── static/
+│   ├── app.js            # Frontend logic
+│   └── style.css         # Dashboard styling
+├── network_scanner.db    # SQLite database
+├── requirements.txt
+├── README.md
+└── LICENSE
 ```
 
-## Usage
+---
 
-### Command-line Arguments
+## How It Works
 
-The tool supports the following command-line arguments:
+1. User initiates a scan via UI or API
+2. Scan request is stored with status `pending`
+3. Background task starts the scan
+4. Status updates to `running`
+5. Results are saved to database
+6. Status updates to `completed` or `failed`
+7. UI/API retrieves results in real-time
 
-| Argument      | Description                                                | Default Value               |
-|---------------|------------------------------------------------------------|-----------------------------|
-| `-r, --range` | IP range to scan (e.g., `192.168.1.1/24`).                  | `192.168.1.1/24`            |
-| `-p, --ports` | Comma-separated list of ports to scan (e.g., `22,80,443`).  | Common ports (see `config`) |
-| `-v, --verbose` | Enable verbose output for detailed logging.                | Disabled                    |
-| `-f, --file`  | Save the results to a file (`txt` or `csv`).                | None                        |
-| `-o, --output` | Specify the output file name (default: `scan_results`).     | `scan_results`              |
+---
 
-### Examples
+## Live Website
 
-#### Basic Scan
+🌐 **Live Dashboard & API:**
+```
+https://network-scanner-api.onrender.com
+```
 
-Scan the default IP range with common ports:
+- Web Dashboard: `/`
+- Swagger Docs: `/docs`
 
+---
+
+## API Endpoints
+
+### Start Scan
+```
+POST /scan
+```
+Request Body:
+```json
+{
+  "ip_range": "192.168.1.1/24",
+  "ports": [22, 80, 443]
+}
+```
+
+### Get Scan Results
+```
+GET /results/{scan_id}
+```
+
+### List All Scans
+```
+GET /results
+```
+
+Swagger Docs:
+```
+/docs
+```
+
+---
+
+## Example Usage
+
+### Using the Web Dashboard
+
+1. Open the live site:
+   ```
+   https://network-scanner-api.onrender.com
+   ```
+2. Enter an IP range (example: `192.168.1.1/24`)
+3. Enter ports (example: `22,80,443`) or leave blank for defaults
+4. Click **Start Scan**
+5. Watch scan status update in real time
+6. View discovered hosts and open ports once completed
+
+### Using the REST API (cURL)
+
+Start a scan:
 ```bash
-python main.py
+curl -X POST https://network-scanner-api.onrender.com/scan \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ip_range": "192.168.1.1/24",
+    "ports": [22, 80]
+  }'
 ```
 
-#### Custom IP Range and Ports
-
-Specify a custom IP range and port list:
-
+Get scan results:
 ```bash
-python main.py -r 192.168.0.1/24 -p 22,80,443
+curl https://network-scanner-api.onrender.com/results/1
 ```
 
-#### Save Results to a File
-
-Save the results in `csv` format:
-
+List all scans:
 ```bash
-python main.py -f csv -o my_scan_results
+curl https://network-scanner-api.onrender.com/results
 ```
 
-#### Enable Verbose Mode
+---
 
-Enable detailed logging:
+## Running Locally
 
+### Install dependencies
 ```bash
-python main.py -v
+pip install -r requirements.txt
 ```
 
-## Sample Output
-
-### Command Output
-
-```
-Found 3 active host(s):
-+-----------------+-------------------+-------------+
-| IP Address      | MAC Address       | Open Ports |
-+-----------------+-------------------+-------------+
-| 192.168.1.2     | aa:bb:cc:dd:ee:ff | 22, 80     |
-| 192.168.1.3     | aa:bb:cc:dd:ee:11 | 443         |
-| 192.168.1.4     | aa:bb:cc:dd:ee:22 | 22, 8080    |
-+-----------------+-------------------+-------------+
+### Start server
+```bash
+python -m uvicorn main:app --reload
 ```
 
-### Saved Results
-
-#### TXT Format
-
+Open:
 ```
-IP Address MAC Address Open Ports
-192.168.1.2 aa:bb:cc:dd:ee:ff 22,80
-192.168.1.3 aa:bb:cc:dd:ee:11 443
-192.168.1.4 aa:bb:cc:dd:ee:22 22,8080
+http://127.0.0.1:8000
 ```
 
-#### CSV Format
+---
 
-```
-IP Address,MAC Address,Open Ports
-192.168.1.2,aa:bb:cc:dd:ee:ff,22,80
-192.168.1.3,aa:bb:cc:dd:ee:11,443
-192.168.1.4,aa:bb:cc:dd:ee:22,22,8080
-```
+## Deployment Notes
 
-## Configuration
+- Deployed on **Render**
+- ARP scanning is automatically disabled in cloud environments
+- Background tasks continue to function normally
 
-Default settings can be modified in the `config.py` file:
+---
 
-```python
-# Default IP range for network scanning
-DEFAULT_IP_RANGE = "192.168.1.1/24"
+## Future Enhancements
 
-# Default list of common ports to scan
-DEFAULT_PORTS = [20, 21, 22, 23, 25, 53, 80, 110, 143, 443, 3306, 8080]
-
-# Timeout for socket connections (in seconds)
-SOCKET_TIMEOUT = 1
-
-# Verbosity level (True for detailed output, False for minimal output)
-VERBOSE = False
-```
-
-## 🐜 License
-
-This project is licensed under the BSD 3-Clause License. See the [LICENSE](LICENSE) file for details.
+- 🔐 Authentication & API security
+- ⏱ Rate limiting
+- 🧑 User accounts (JWT-based auth)
+- 📦 Redis/Celery for distributed background jobs
+- 📊 Advanced visualizations
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! To contribute:
+Contributions are welcome and appreciated! 🎉
 
-1. Fork the repository.
-2. Create a new branch for your feature/bug fix.
-3. Submit a pull request with a detailed description of changes.
+If you’d like to contribute:
+
+1. Fork the repository
+2. Create a new feature branch (`git checkout -b feature/your-feature-name`)
+3. Commit your changes (`git commit -m "Add new feature"`)
+4. Push to the branch (`git push origin feature/your-feature-name`)
+5. Open a Pull Request
+
+Please ensure:
+- Code is clean and well-documented
+- Existing functionality is not broken
+- New features include basic testing where applicable
 
 ---
 
 ## 💬 Feedback
 
-We welcome your feedback! If you encounter any issues or have suggestions for improvement, feel free to open an issue or contribute to the project.
+Feedback, suggestions, and ideas are highly welcome!
 
-### How to Provide Feedback
+If you:
+- Found a bug 🐞
+- Have a feature request ✨
+- Want to improve performance or security 🔐
 
-1. **Open an Issue**: If you find a bug or have an enhancement suggestion, please open an issue in the [GitHub repository](https://github.com/your-username/NetworkScanner/issues).
-2. **Submit a Pull Request**: If you've fixed a bug or added a new feature, submit a pull request for review. Please follow the contribution guidelines outlined below.
+Please open an **Issue** in the GitHub repository or start a discussion.
 
-Thank you!
+Your feedback helps improve the project and makes it more robust for real-world usage.
+
+---
+
+## 🐜 License
+
+This project is licensed under the BSD 3-Clause License. See the [LICENSE](LICENSE) file for details.
