@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Live Network Scanner</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="container">
+    <h1>Live Network Scanner</h1>
+
+    <div class="card">
+        <h2>Start New Scan</h2>
+        <input type="text" id="ipRange" placeholder="IP Range (e.g. 192.168.1.1/24)">
+        <input type="text" id="ports" placeholder="Ports (e.g. 22,80,443)">
+        <button onclick="startScan()">Start Scan</button>
+        <p id="scanMessage"></p>
+    </div>
+
+    <div class="card">
+        <h2>Scan Status</h2>
+        <pre id="statusOutput">No scan started</pre>
+    </div>
+
+    <div class="card">
+        <h2>Scan Results</h2>
+        <pre id="resultsOutput">No results</pre>
+    </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
