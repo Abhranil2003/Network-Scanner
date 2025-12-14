@@ -1,14 +1,16 @@
 import ipaddress
+from typing import List
 
-def validate_ip_range(ip_range):
+
+def validate_ip_range(ip_range: str) -> bool:
     """
-    Validates whether the given IP range is in a valid CIDR format.
+    Validate whether the given IP range is in valid CIDR format.
 
     Args:
-        ip_range (str): The IP range to validate (e.g., "192.168.1.1/24").
+        ip_range (str): IP range (e.g., "192.168.1.1/24")
 
     Returns:
-        bool: True if valid, False otherwise.
+        bool: True if valid CIDR, False otherwise
     """
     try:
         ipaddress.IPv4Network(ip_range, strict=False)
@@ -16,43 +18,22 @@ def validate_ip_range(ip_range):
     except ValueError:
         return False
 
-def validate_port_list(ports):
+
+def validate_port_list(ports: List[int]) -> bool:
     """
-    Validates whether the provided list of ports is valid.
+    Validate whether all ports are within valid TCP/UDP range.
 
     Args:
-        ports (list): A list of port numbers to validate.
+        ports (List[int]): List of port numbers
 
     Returns:
-        bool: True if all ports are valid, False otherwise.
+        bool: True if all ports are valid, False otherwise
     """
+    if not ports:
+        return False
+
     for port in ports:
-        if not (1 <= port <= 65535):
+        if not isinstance(port, int) or not (1 <= port <= 65535):
             return False
+
     return True
-
-def parse_port_list(port_string):
-    """
-    Parses a comma-separated string of ports into a list of integers.
-
-    Args:
-        port_string (str): Comma-separated port numbers (e.g., "22,80,443").
-
-    Returns:
-        list: A list of integers representing the ports.
-    """
-    try:
-        return [int(port.strip()) for port in port_string.split(",")]
-    except ValueError:
-        return []
-
-def print_verbose(message, verbose):
-    """
-    Prints a message if verbosity is enabled.
-
-    Args:
-        message (str): The message to print.
-        verbose (bool): Flag indicating whether to print the message.
-    """
-    if verbose:
-        print(message)
