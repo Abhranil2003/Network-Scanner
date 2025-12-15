@@ -16,7 +16,6 @@ from sqlalchemy.orm import Session
 from utils import validate_ip_range, validate_port_list
 from database import SessionLocal
 from models import Scan
-
 from tasks import run_scan
 
 # -------------------- App --------------------
@@ -24,7 +23,7 @@ from tasks import run_scan
 app = FastAPI(
     title="Live Network Scanner",
     description="FastAPI-based live network scanning service",
-    version="2.3.0"
+    version="2.4.0"
 )
 
 # -------------------- Frontend --------------------
@@ -52,7 +51,7 @@ class ScanResponse(BaseModel):
     scan_id: int
     message: str
 
-# -------------------- Frontend Route --------------------
+# -------------------- Frontend --------------------
 
 @app.get("/")
 def dashboard(request: Request):
@@ -69,42 +68,38 @@ def start_scan(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
-    # Validate input
     if not validate_ip_range(request.ip_range):
         raise HTTPException(status_code=400, detail="Invalid IP range format")
 
     if not validate_port_list(request.ports):
         raise HTTPException(status_code=400, detail="Invalid port list")
 
-    # Create scan entry (PENDING)
     scan = Scan(
         ip_range=request.ip_range,
         ports_scanned=",".join(map(str, request.ports)),
-        status="pending"
+        status="pending",
+        mode="demo" if request.demo else "real"
     )
     db.add(scan)
     db.commit()
     db.refresh(scan)
 
-    # Run scan in background
     background_tasks.add_task(
         run_scan,
         scan.id,
         request.ip_range,
-        request.ports
+        request.ports,
+        request.demo
     )
 
     return {
         "scan_id": scan.id,
-        "message": "Scan started in background"
+        "message": "Scan started"
     }
-
-# -------------------- RESULTS APIs --------------------
 
 @app.get("/results/{scan_id}")
 def get_scan_results(scan_id: int, db: Session = Depends(get_db)):
     scan = db.query(Scan).filter(Scan.id == scan_id).first()
-
     if not scan:
         raise HTTPException(status_code=404, detail="Scan not found")
 
@@ -119,23 +114,9 @@ def get_scan_results(scan_id: int, db: Session = Depends(get_db)):
     return {
         "scan_id": scan.id,
         "status": scan.status,
+        "mode": scan.mode,
         "ip_range": scan.ip_range,
         "ports_scanned": scan.ports_scanned,
         "created_at": scan.created_at,
         "results": results
     }
-
-@app.get("/results")
-def list_scans(db: Session = Depends(get_db)):
-    scans = db.query(Scan).all()
-
-    return [
-        {
-            "scan_id": scan.id,
-            "status": scan.status,
-            "ip_range": scan.ip_range,
-            "ports_scanned": scan.ports_scanned,
-            "created_at": scan.created_at
-        }
-        for scan in scans
-    ]
