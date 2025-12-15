@@ -10,10 +10,19 @@
 <div class="container">
     <h1>Live Network Scanner</h1>
 
+    <p class="notice">
+        ℹ️ This is a public demo. ARP-based scanning works only on local networks.
+        Enable <b>Demo Mode</b> to see example results.
+    </p>
+
     <div class="card">
         <h2>Start New Scan</h2>
         <input type="text" id="ipRange" placeholder="IP Range (e.g. 192.168.1.1/24)">
         <input type="text" id="ports" placeholder="Ports (e.g. 22,80,443)">
+        <label>
+            <input type="checkbox" id="demoMode" checked>
+            Demo mode (recommended)
+        </label>
         <button onclick="startScan()">Start Scan</button>
         <p id="scanMessage"></p>
     </div>
