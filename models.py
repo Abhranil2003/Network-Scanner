@@ -12,8 +12,8 @@ class Scan(Base):
     ip_range = Column(String, nullable=False)
     ports_scanned = Column(String, nullable=False)
 
-    # NEW: scan status for background processing
     status = Column(String, default="pending", nullable=False)
+    mode = Column(String, default="real", nullable=False)  # real | demo
 
     created_at = Column(DateTime, default=datetime.utcnow)
 
