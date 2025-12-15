@@ -4,6 +4,7 @@ let pollInterval = null;
 async function startScan() {
     const ipRange = document.getElementById("ipRange").value;
     const portsInput = document.getElementById("ports").value;
+    const demoMode = document.getElementById("demoMode").checked;
 
     const ports = portsInput
         ? portsInput.split(",").map(p => parseInt(p.trim()))
@@ -14,7 +15,8 @@ async function startScan() {
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
             ip_range: ipRange,
-            ports: ports
+            ports: ports,
+            demo: demoMode
         })
     });
 
@@ -38,6 +40,7 @@ async function fetchResults() {
         JSON.stringify({
             scan_id: data.scan_id,
             status: data.status,
+            mode: data.mode,
             created_at: data.created_at
         }, null, 2);
 
