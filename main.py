@@ -13,7 +13,7 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
-from utils import validate_ip_range, validate_port_list
+from utils import validate_ip_range, validate_port_list, validate_gateway
 from database import SessionLocal
 from models import Scan
 from tasks import run_scan
