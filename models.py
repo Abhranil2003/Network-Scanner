@@ -12,7 +12,7 @@ class Scan(Base):
     ip_range = Column(String, nullable=False)
     ports_scanned = Column(String, nullable=False)
     status = Column(String, nullable=False, default="pending")
-    mode = Column(String, nullable=False, default="cloud")
+    mode = Column(String, nullable=False, default="live")
     created_at = Column(DateTime, default=datetime.utcnow)
 
     hosts = relationship(
