@@ -78,7 +78,7 @@ def start_scan(
         ip_range=request.ip_range,
         ports_scanned=",".join(map(str, request.ports)),
         status="pending",
-        mode="demo" if request.demo else "real"
+        mode="demo" if request.demo else "cloud"
     )
     db.add(scan)
     db.commit()
