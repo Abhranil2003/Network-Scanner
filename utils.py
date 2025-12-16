@@ -1,18 +1,8 @@
 import ipaddress
 from typing import List
-import ipaddress
 
 
 def validate_ip_range(ip_range: str) -> bool:
-    """
-    Validate whether the given IP range is in valid CIDR format.
-
-    Args:
-        ip_range (str): IP range (e.g., "192.168.1.1/24")
-
-    Returns:
-        bool: True if valid CIDR, False otherwise
-    """
     try:
         ipaddress.IPv4Network(ip_range, strict=False)
         return True
@@ -21,29 +11,18 @@ def validate_ip_range(ip_range: str) -> bool:
 
 
 def validate_gateway(ip_range: str, gateway: str) -> bool:
-    """
-    Validates that the gateway:
-    - Is a valid IPv4 address
-    - Belongs to the given IP range
-    """
+    if not gateway:
+        return True
+
     try:
         network = ipaddress.ip_network(ip_range, strict=False)
         gw_ip = ipaddress.ip_address(gateway)
         return gw_ip in network
     except ValueError:
         return False
-    
-    
+
+
 def validate_port_list(ports: List[int]) -> bool:
-    """
-    Validate whether all ports are within valid TCP/UDP range.
-
-    Args:
-        ports (List[int]): List of port numbers
-
-    Returns:
-        bool: True if all ports are valid, False otherwise
-    """
     if not ports:
         return False
 
