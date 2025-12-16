@@ -39,12 +39,20 @@ async function startScan() {
     setButtonState(true);
 
     const ipRange = document.getElementById("ipRange").value;
+        if (!ipRange || ipRange.trim() === "") {
+        displayMessage("Please enter a valid IP range (e.g. 192.168.1.0/24).", "error");
+        setButtonState(false);
+        return;
+    }
     const portsInput = document.getElementById("ports").value;
     const demoMode = document.getElementById("demoMode").checked;
 
     const ports = portsInput
-        ? portsInput.split(",").map(p => parseInt(p.trim()))
-        : [22, 80, 443];
+    ? portsInput
+        .split(",")
+        .map(p => parseInt(p.trim()))
+        .filter(p => Number.isInteger(p) && p > 0 && p <= 65535)
+    : [22, 80, 443];
 
     try {
         const response = await fetch("/scan", {
@@ -79,7 +87,13 @@ async function fetchResults() {
 
     try {
         const response = await fetch(`/results/${currentScanId}`);
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch results (status ${response.status})`);
+        }
+
         const data = await response.json();
+
 
         // Update status display with color-coded status
         let statusText = data.status || "pending";
