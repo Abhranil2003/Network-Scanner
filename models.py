@@ -10,6 +10,7 @@ class Scan(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     ip_range = Column(String, nullable=False)
+    gateway = Column(String, nullable=True)  
     ports_scanned = Column(String, nullable=False)
 
     status = Column(String, nullable=False, default="pending")
