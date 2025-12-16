@@ -44,6 +44,7 @@ def get_db():
 
 class ScanRequest(BaseModel):
     ip_range: str
+    gateway: Optional[str] = None
     ports: Optional[List[int]] = [22, 80, 443]
     demo: Optional[bool] = False
 
