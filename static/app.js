@@ -1,5 +1,3 @@
-// app.js — FINAL (Dashboard + Demo + Gateway + Cloud-safe)
-
 let currentScanId = null;
 let pollInterval = null;
 
@@ -8,56 +6,21 @@ const statusOutput = document.getElementById("statusOutput");
 const resultsOutput = document.getElementById("resultsOutput");
 const scanMessageEl = document.getElementById("scanMessage");
 
-// -------------------- Initial UI State --------------------
-
-resultsOutput.innerText = "[]";
-statusOutput.innerText = JSON.stringify(
-    { status: "Awaiting scan start..." },
-    null,
-    2
-);
-
-// -------------------- UI Helpers --------------------
-
-function setButtonState(isScanning) {
-    startButton.disabled = isScanning;
-    if (isScanning) {
-        startButton.innerHTML = '<span class="spinner"></span> Scanning...';
-    } else {
-        startButton.innerText = "Start Scan";
-    }
-}
-
 function displayMessage(message, type = "success") {
     scanMessageEl.innerText = message;
     scanMessageEl.style.display = "block";
-
-    if (type === "error") {
-        scanMessageEl.style.backgroundColor = "#f8d7da";
-        scanMessageEl.style.color = "#721c24";
-        scanMessageEl.style.border = "1px solid #f5c6cb";
-    } else {
-        scanMessageEl.style.backgroundColor = "#d4edda";
-        scanMessageEl.style.color = "#155724";
-        scanMessageEl.style.border = "1px solid #c3e6cb";
-    }
+    scanMessageEl.className = type;
 }
 
-// -------------------- Start Scan --------------------
+function setButtonState(scanning) {
+    startButton.disabled = scanning;
+    startButton.innerText = scanning ? "Scanning..." : "Start Scan";
+}
 
 async function startScan() {
     scanMessageEl.style.display = "none";
-    resultsOutput.innerText = "[]";
-    statusOutput.innerText = JSON.stringify(
-        { status: "Starting scan..." },
-        null,
-        2
-    );
-
-    if (pollInterval) {
-        clearInterval(pollInterval);
-        pollInterval = null;
-    }
+    resultsOutput.innerText = "";
+    statusOutput.innerText = "";
 
     setButtonState(true);
 
@@ -66,141 +29,72 @@ async function startScan() {
     const portsInput = document.getElementById("ports").value;
     const demoMode = document.getElementById("demoMode").checked;
 
-    // -------- Validation --------
-
     if (!ipRange) {
-        displayMessage(
-            "Please enter a valid IP range (e.g. 192.168.1.0/24).",
-            "error"
-        );
+        displayMessage("IP range is required", "error");
         setButtonState(false);
         return;
     }
 
     const ports = portsInput
-        ? portsInput
-            .split(",")
-            .map(p => parseInt(p.trim()))
-            .filter(p => Number.isInteger(p) && p > 0 && p <= 65535)
-        : [22, 80, 443];
-
-    if (ports.length === 0) {
-        displayMessage(
-            "No valid ports provided. Please enter ports between 1–65535.",
-            "error"
-        );
-        setButtonState(false);
-        return;
-    }
-
-    // -------- API Call --------
+        .split(",")
+        .map(p => parseInt(p.trim()))
+        .filter(p => Number.isInteger(p) && p > 0 && p <= 65535);
 
     try {
         const response = await fetch("/scan", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {"Content-Type": "application/json"},
             body: JSON.stringify({
                 ip_range: ipRange,
                 gateway: gateway || null,
-                ports: ports,
+                ports: ports.length ? ports : [22, 80, 443],
                 demo: demoMode
             })
         });
 
         if (!response.ok) {
-            throw new Error(`Server returned status ${response.status}`);
+            const err = await response.json();
+            throw new Error(err.detail || "Failed to start scan");
         }
 
         const data = await response.json();
         currentScanId = data.scan_id;
 
-        displayMessage(
-            `Scan started successfully (ID: ${currentScanId}).`,
-            "success"
-        );
-
+        displayMessage(`Scan started (ID ${currentScanId})`);
         pollInterval = setInterval(fetchResults, 3000);
 
-    } catch (error) {
-        displayMessage(
-            `Error starting scan: ${error.message}`,
-            "error"
-        );
+    } catch (err) {
+        displayMessage(err.message, "error");
         setButtonState(false);
     }
 }
-
-// -------------------- Poll Scan Results --------------------
 
 async function fetchResults() {
     if (!currentScanId) return;
 
     try {
         const response = await fetch(`/results/${currentScanId}`);
-
-        if (!response.ok) {
-            throw new Error(
-                `Failed to fetch results (status ${response.status})`
-            );
-        }
+        if (!response.ok) throw new Error("Failed to fetch results");
 
         const data = await response.json();
 
-        const statusText = data.status || "pending";
-        statusOutput.className = `status-${statusText.toLowerCase()}`;
+        statusOutput.innerText = JSON.stringify({
+            status: data.status,
+            mode: data.mode,
+            gateway: data.gateway,
+            created_at: data.created_at
+        }, null, 2);
 
-        statusOutput.innerText = JSON.stringify(
-            {
-                scan_id: data.scan_id,
-                status: statusText,
-                mode: data.mode,
-                created_at: data.created_at
-            },
-            null,
-            2
-        );
+        resultsOutput.innerText = JSON.stringify(data.results || [], null, 2);
 
-        if (Array.isArray(data.results)) {
-            resultsOutput.innerText = JSON.stringify(
-                data.results,
-                null,
-                2
-            );
-        } else {
-            resultsOutput.innerText = JSON.stringify(
-                "Awaiting results...",
-                null,
-                2
-            );
-        }
-
-        if (statusText === "completed" || statusText === "failed") {
+        if (data.status === "completed" || data.status === "failed") {
             clearInterval(pollInterval);
-            pollInterval = null;
             setButtonState(false);
-
-            if (statusText === "completed") {
-                displayMessage(
-                    `Scan ${currentScanId} completed successfully.`,
-                    "success"
-                );
-            } else {
-                displayMessage(
-                    `Scan ${currentScanId} failed. Please check logs.`,
-                    "error"
-                );
-            }
         }
 
-    } catch (error) {
+    } catch (err) {
         clearInterval(pollInterval);
-        pollInterval = null;
         setButtonState(false);
-        currentScanId = null;
-
-        displayMessage(
-            `Error fetching results: ${error.message}`,
-            "error"
-        );
+        displayMessage(err.message, "error");
     }
 }
