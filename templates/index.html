@@ -3,38 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <title>Live Network Scanner</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
 <div class="container">
-    <h1>Live Network Scanner</h1>
+    <h1>📡 Live Network Scanner</h1>
 
     <p class="notice">
-        ℹ️ This is a public demo. ARP-based scanning works only on local networks.
-        Enable <b>Demo Mode</b> to see example results.
+        ℹ️ **Public Demo Notice:** ARP-based scanning works only on your local network.
+        Enable **Demo Mode** to quickly see example results without actual scanning.
     </p>
 
     <div class="card">
-        <h2>Start New Scan</h2>
-        <input type="text" id="ipRange" placeholder="IP Range (e.g. 192.168.1.1/24)">
-        <input type="text" id="ports" placeholder="Ports (e.g. 22,80,443)">
-        <label>
+        <h2>🚀 Start New Scan</h2>
+        
+        <div class="form-group">
+            <label for="ipRange">IP Range (CIDR or single IP)</label>
+            <input type="text" id="ipRange" placeholder="e.g. 192.168.1.1/24" value="192.168.1.1/24">
+        </div>
+
+        <div class="form-group">
+            <label for="ports">Ports (Comma-separated)</label>
+            <input type="text" id="ports" placeholder="e.g. 22,80,443" value="22,80,443">
+        </div>
+
+        <div class="checkbox-group">
             <input type="checkbox" id="demoMode" checked>
-            Demo mode (recommended)
-        </label>
-        <button onclick="startScan()">Start Scan</button>
-        <p id="scanMessage"></p>
+            <label for="demoMode">Demo mode (Recommended for public internet testing)</label>
+        </div>
+
+        <button id="startScanButton" onclick="startScan()">Start Scan</button>
+        <p id="scanMessage" style="display: none;">Scan information will appear here.</p>
     </div>
 
     <div class="card">
-        <h2>Scan Status</h2>
-        <pre id="statusOutput">No scan started</pre>
+        <h2>📊 Scan Status</h2>
+        <pre id="statusOutput">{"status": "Awaiting scan start..."}</pre>
     </div>
 
     <div class="card">
-        <h2>Scan Results</h2>
-        <pre id="resultsOutput">No results</pre>
+        <h2>📝 Scan Results</h2>
+        <pre id="resultsOutput">[]</pre>
     </div>
 </div>
 
