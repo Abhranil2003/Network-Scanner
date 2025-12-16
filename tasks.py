@@ -1,8 +1,8 @@
 import os
 from sqlalchemy.orm import Session
+
 from database import SessionLocal
 from models import Scan, Host, OpenPort
-
 from network_scanner import scan_network
 from port_scanner import scan_ports
 
@@ -20,6 +20,8 @@ def run_scan(scan_id: int, ip_range: str, ports: list[int], demo: bool = False):
 
         # ---------------- DEMO MODE ----------------
         if demo:
+            scan.mode = "demo"
+
             demo_hosts = [
                 {"ip": "192.168.1.10", "mac": "AA:BB:CC:DD:EE:01"},
                 {"ip": "192.168.1.20", "mac": "AA:BB:CC:DD:EE:02"},
@@ -50,14 +52,22 @@ def run_scan(scan_id: int, ip_range: str, ports: list[int], demo: bool = False):
             db.commit()
             return
 
-        # ---------------- REAL MODE ----------------
-        # Cloud-safe fallback
+        # ---------------- CLOUD ENV CHECK ----------------
         if os.getenv("RENDER") == "true":
+            scan.mode = "cloud"
             scan.status = "completed"
             db.commit()
             return
 
-        active_hosts = scan_network(ip_range)
+        # ---------------- LIVE MODE ----------------
+        try:
+            active_hosts = scan_network(ip_range)
+            scan.mode = "live"
+        except Exception:
+            scan.mode = "cloud"
+            scan.status = "completed"
+            db.commit()
+            return
 
         for host in active_hosts:
             host_obj = Host(
