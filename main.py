@@ -23,7 +23,7 @@ from tasks import run_scan
 app = FastAPI(
     title="Live Network Scanner",
     description="FastAPI-based live network scanning service",
-    version="2.4.0"
+    version="2.5.0"
 )
 
 # -------------------- Frontend --------------------
