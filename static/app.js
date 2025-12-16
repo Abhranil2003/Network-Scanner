@@ -186,4 +186,21 @@ async function fetchResults() {
                 );
             } else {
                 displayMessage(
-                    `Scan ${curr
+                    `Scan ${currentScanId} failed. Please check logs.`,
+                    "error"
+                );
+            }
+        }
+
+    } catch (error) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+        setButtonState(false);
+        currentScanId = null;
+
+        displayMessage(
+            `Error fetching results: ${error.message}`,
+            "error"
+        );
+    }
+}
