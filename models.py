@@ -11,14 +11,16 @@ class Scan(Base):
     id = Column(Integer, primary_key=True, index=True)
     ip_range = Column(String, nullable=False)
     ports_scanned = Column(String, nullable=False)
+
     status = Column(String, nullable=False, default="pending")
-    mode = Column(String, nullable=False, default="live")
+    mode = Column(String, nullable=False, default="cloud")
+
     created_at = Column(DateTime, default=datetime.utcnow)
 
     hosts = relationship(
         "Host",
         back_populates="scan",
-        cascade="all, delete"
+        cascade="all, delete-orphan"
     )
 
 
@@ -27,6 +29,7 @@ class Host(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     scan_id = Column(Integer, ForeignKey("scans.id"), nullable=False)
+
     ip_address = Column(String, nullable=False)
     mac_address = Column(String, nullable=False)
 
@@ -34,7 +37,7 @@ class Host(Base):
     open_ports = relationship(
         "OpenPort",
         back_populates="host",
-        cascade="all, delete"
+        cascade="all, delete-orphan"
     )
 
 
