@@ -6,6 +6,9 @@ const statusOutput = document.getElementById("statusOutput");
 const resultsOutput = document.getElementById("resultsOutput");
 const scanMessageEl = document.getElementById("scanMessage");
 
+const statusBadge = document.getElementById("statusBadge");
+const spinner = document.getElementById("spinner");
+
 function displayMessage(message, type = "success") {
     scanMessageEl.innerText = message;
     scanMessageEl.style.display = "block";
@@ -47,6 +50,43 @@ function getModeMessage(mode) {
     }
 }
 
+/* ---------- VISUAL STATUS HANDLER ---------- */
+
+function updateVisualStatus(status) {
+    statusBadge.className = "status-badge";
+
+    switch (status) {
+        case "queued":
+            statusBadge.classList.add("status-queued");
+            statusBadge.innerText = "Queued";
+            spinner.classList.add("hidden");
+            break;
+
+        case "running":
+            statusBadge.classList.add("status-running");
+            statusBadge.innerText = "Running";
+            spinner.classList.remove("hidden");
+            break;
+
+        case "completed":
+            statusBadge.classList.add("status-completed");
+            statusBadge.innerText = "Completed";
+            spinner.classList.add("hidden");
+            break;
+
+        case "failed":
+            statusBadge.classList.add("status-failed");
+            statusBadge.innerText = "Failed";
+            spinner.classList.add("hidden");
+            break;
+
+        default:
+            statusBadge.classList.add("status-idle");
+            statusBadge.innerText = "Idle";
+            spinner.classList.add("hidden");
+    }
+}
+
 /* ---------- SAFE RESPONSE PARSER ---------- */
 
 async function safeParseJSON(response) {
@@ -63,6 +103,7 @@ async function startScan() {
     resultsOutput.innerText = "";
     statusOutput.innerText = "";
 
+    updateVisualStatus("queued");
     setButtonState(true);
 
     const ipRange = document.getElementById("ipRange").value.trim();
@@ -73,6 +114,7 @@ async function startScan() {
     if (!ipRange) {
         displayMessage("IP range is required", "error");
         setButtonState(false);
+        updateVisualStatus("failed");
         return;
     }
 
@@ -111,6 +153,7 @@ async function startScan() {
     } catch (err) {
         displayMessage(err.message, "error");
         setButtonState(false);
+        updateVisualStatus("failed");
     }
 }
 
@@ -126,6 +169,9 @@ async function fetchResults() {
                 data.detail || data.raw || "Failed to fetch results"
             );
         }
+
+        /* Visual status update */
+        updateVisualStatus(data.status);
 
         const statusMessage = getStatusMessage(data.status);
         const modeMessage = getModeMessage(data.mode);
@@ -157,6 +203,7 @@ async function fetchResults() {
     } catch (err) {
         clearInterval(pollInterval);
         setButtonState(false);
+        updateVisualStatus("failed");
         displayMessage(err.message, "error");
     }
 }
