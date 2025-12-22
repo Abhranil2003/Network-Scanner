@@ -27,7 +27,7 @@ from tasks import run_scan
 app = FastAPI(
     title="Live Network Scanner",
     description="FastAPI-based live network scanning service",
-    version="2.7.0"
+    version="2.7.1"
 )
 
 # -------------------- Static & Templates --------------------
@@ -62,7 +62,10 @@ class ScanResponse(BaseModel):
 
 @app.get("/", response_class=HTMLResponse)
 def dashboard(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(
+        "index.html",
+        {"request": request}
+    )
 
 # -------------------- API --------------------
 
@@ -72,36 +75,60 @@ def start_scan(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
+    # 1️⃣ Validate IP range
     if not validate_ip_range(request.ip_range):
-        raise HTTPException(400, "Invalid IP range")
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid IP range or CIDR notation"
+        )
 
+    # 2️⃣ Validate gateway (only if provided)
     if request.gateway:
         if not validate_gateway(request.ip_range, request.gateway):
-            raise HTTPException(400, "Gateway must belong to the IP range")
+            raise HTTPException(
+                status_code=400,
+                detail="Gateway must belong to the selected IP range"
+            )
 
+    # 3️⃣ Validate ports
     if not validate_port_list(request.ports):
-        raise HTTPException(400, "Invalid port list")
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid port list (ports must be 1–65535)"
+        )
 
+    # 4️⃣ Create scan entry (queued state)
     scan = Scan(
         ip_range=request.ip_range,
         gateway=request.gateway,
         ports_scanned=",".join(map(str, request.ports)),
-        status="created",
+        status="queued",
         mode="demo" if request.demo else "cloud"
     )
+
     db.add(scan)
     db.commit()
     db.refresh(scan)
 
-    background_tasks.add_task(
-        run_scan,
-        scan.id,
-        request.ip_range,
-        request.ports,
-        request.gateway,
-        request.demo
-    )
+    # 5️⃣ Safely schedule background scan
+    try:
+        background_tasks.add_task(
+            run_scan,
+            scan.id,
+            request.ip_range,
+            request.ports,
+            request.gateway,
+            request.demo
+        )
+    except Exception:
+        scan.status = "failed"
+        db.commit()
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to schedule scan task"
+        )
 
+    # 6️⃣ Always return JSON
     return {
         "scan_id": scan.id,
         "status": scan.status,
