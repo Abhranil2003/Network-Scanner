@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -9,14 +9,11 @@ class Scan(Base):
     __tablename__ = "scans"
 
     id = Column(Integer, primary_key=True, index=True)
-
     ip_range = Column(String, nullable=False)
     gateway = Column(String, nullable=True)
-
     ports_scanned = Column(String, nullable=False)
-
-    status = Column(String, default="queued")
-    mode = Column(String, default="demo")
+    status = Column(String, nullable=False, default="queued")
+    mode = Column(String, nullable=False, default="demo")
 
     created_at = Column(DateTime, default=datetime.utcnow)
     started_at = Column(DateTime, nullable=True)
@@ -35,7 +32,6 @@ class Host(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     scan_id = Column(Integer, ForeignKey("scans.id"), nullable=False)
-
     ip_address = Column(String, nullable=False)
     mac_address = Column(String, nullable=False)
 
@@ -54,4 +50,5 @@ class OpenPort(Base):
     host_id = Column(Integer, ForeignKey("hosts.id"), nullable=False)
     port = Column(Integer, nullable=False)
 
+    # 🔗 RELATIONSHIP
     host = relationship("Host", back_populates="open_ports")
