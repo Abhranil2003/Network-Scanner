@@ -1,10 +1,4 @@
-from sqlalchemy import (
-    Column,
-    Integer,
-    String,
-    ForeignKey,
-    DateTime
-)
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -18,13 +12,12 @@ class Scan(Base):
 
     ip_range = Column(String, nullable=False)
     gateway = Column(String, nullable=True)
+
     ports_scanned = Column(String, nullable=False)
 
-    # Lifecycle state
-    status = Column(String, nullable=False, default="created")
-    mode = Column(String, nullable=False, default="cloud")
+    status = Column(String, default="queued")
+    mode = Column(String, default="demo")
 
-    # Lifecycle timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
@@ -47,7 +40,6 @@ class Host(Base):
     mac_address = Column(String, nullable=False)
 
     scan = relationship("Scan", back_populates="hosts")
-
     open_ports = relationship(
         "OpenPort",
         back_populates="host",
