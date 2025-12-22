@@ -20,6 +20,8 @@ from utils import (
     validate_gateway
 )
 from database import SessionLocal
+from database import engine
+from models import Base
 from models import Scan, Host, OpenPort
 from tasks import run_scan
 
@@ -30,6 +32,9 @@ app = FastAPI(
     description="FastAPI-based live network scanning service",
     version="2.7.2"
 )
+
+# -------------------- Create DB Tables --------------------
+Base.metadata.create_all(bind=engine)
 
 # -------------------- Static & Templates --------------------
 
