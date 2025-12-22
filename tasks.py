@@ -16,13 +16,14 @@ def run_scan(
     demo: bool = False
 ):
     db: Session = SessionLocal()
+    scan: Scan | None = None
 
     try:
         scan = db.query(Scan).filter(Scan.id == scan_id).first()
         if not scan:
             return
 
-        # ---- Lifecycle: queued → running ----
+        # ---- Lifecycle: pending → running ----
         scan.status = "running"
         scan.started_at = datetime.utcnow()
         db.commit()
@@ -48,22 +49,20 @@ def run_scan(
                     mac_address=host["mac"]
                 )
                 db.add(host_obj)
-                db.commit()
-                db.refresh(host_obj)
+                db.flush()  # get host_obj.id without full commit
 
                 for port in demo_ports.get(host["ip"], []):
                     db.add(OpenPort(
                         host_id=host_obj.id,
                         port=port
                     ))
-                db.commit()
 
             scan.status = "completed"
             scan.completed_at = datetime.utcnow()
             db.commit()
             return
 
-        # ---------------- CLOUD ENV SAFETY ----------------
+        # ---------------- CLOUD SAFETY ----------------
         if os.getenv("RENDER") == "true":
             scan.mode = "cloud"
             scan.status = "completed"
@@ -74,6 +73,7 @@ def run_scan(
         # ---------------- LIVE MODE ----------------
         scan.mode = "live"
 
+        # gateway reserved for future routing logic
         active_hosts = scan_network(ip_range)
 
         for host in active_hosts:
@@ -83,8 +83,7 @@ def run_scan(
                 mac_address=host["mac"]
             )
             db.add(host_obj)
-            db.commit()
-            db.refresh(host_obj)
+            db.flush()
 
             open_ports = scan_ports(host["ip"], ports)
             for port in open_ports:
@@ -92,16 +91,18 @@ def run_scan(
                     host_id=host_obj.id,
                     port=port
                 ))
-            db.commit()
 
         scan.status = "completed"
         scan.completed_at = datetime.utcnow()
         db.commit()
 
     except Exception as e:
-        scan.status = "failed"
-        scan.failed_at = datetime.utcnow()
-        db.commit()
+        print(f"[SCAN ERROR] Scan ID {scan_id}: {e}")
+
+        if scan:
+            scan.status = "failed"
+            scan.failed_at = datetime.utcnow()
+            db.commit()
 
     finally:
         db.close()
