@@ -3,7 +3,8 @@ from fastapi import (
     HTTPException,
     Depends,
     BackgroundTasks,
-    Request
+    Request,
+    Path
 )
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -11,7 +12,7 @@ from fastapi.templating import Jinja2Templates
 
 from pydantic import BaseModel, Field
 from typing import List, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from utils import (
     validate_ip_range,
@@ -19,7 +20,7 @@ from utils import (
     validate_gateway
 )
 from database import SessionLocal
-from models import Scan
+from models import Scan, Host, OpenPort
 from tasks import run_scan
 
 # -------------------- App --------------------
@@ -27,7 +28,7 @@ from tasks import run_scan
 app = FastAPI(
     title="Live Network Scanner",
     description="FastAPI-based live network scanning service",
-    version="2.7.1"
+    version="2.7.2"
 )
 
 # -------------------- Static & Templates --------------------
@@ -82,7 +83,7 @@ def start_scan(
             detail="Invalid IP range or CIDR notation"
         )
 
-    # 2️⃣ Validate gateway (only if provided)
+    # 2️⃣ Validate gateway
     if request.gateway:
         if not validate_gateway(request.ip_range, request.gateway):
             raise HTTPException(
@@ -97,7 +98,7 @@ def start_scan(
             detail="Invalid port list (ports must be 1–65535)"
         )
 
-    # 4️⃣ Create scan entry (queued state)
+    # 4️⃣ Create scan entry
     scan = Scan(
         ip_range=request.ip_range,
         gateway=request.gateway,
@@ -110,27 +111,53 @@ def start_scan(
     db.commit()
     db.refresh(scan)
 
-    # 5️⃣ Safely schedule background scan
-    try:
-        background_tasks.add_task(
-            run_scan,
-            scan.id,
-            request.ip_range,
-            request.ports,
-            request.gateway,
-            request.demo
-        )
-    except Exception:
-        scan.status = "failed"
-        db.commit()
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to schedule scan task"
-        )
+    # 5️⃣ Background execution
+    background_tasks.add_task(
+        run_scan,
+        scan.id,
+        request.ip_range,
+        request.ports,
+        request.gateway,
+        request.demo
+    )
 
-    # 6️⃣ Always return JSON
     return {
         "scan_id": scan.id,
         "status": scan.status,
         "message": "Scan queued successfully"
+    }
+
+# -------------------- RESULTS ENDPOINT (FIX) --------------------
+
+@app.get("/results/{scan_id}")
+def get_scan_results(
+    scan_id: int = Path(..., gt=0),
+    db: Session = Depends(get_db)
+):
+    scan = (
+        db.query(Scan)
+        .options(joinedload(Scan.hosts).joinedload(Host.open_ports))
+        .filter(Scan.id == scan_id)
+        .first()
+    )
+
+    if not scan:
+        raise HTTPException(status_code=404, detail="Scan not found")
+
+    results = []
+
+    for host in scan.hosts:
+        results.append({
+            "ip": host.ip_address,
+            "mac": host.mac_address,
+            "ports": [p.port for p in host.open_ports]
+        })
+
+    return {
+        "scan_id": scan.id,
+        "status": scan.status,
+        "mode": scan.mode,
+        "gateway": scan.gateway,
+        "created_at": scan.created_at,
+        "results": results
     }

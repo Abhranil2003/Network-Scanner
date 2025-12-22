@@ -17,6 +17,16 @@ function setButtonState(scanning) {
     startButton.innerText = scanning ? "Scanning..." : "Start Scan";
 }
 
+/* ---------- SAFE RESPONSE PARSER ---------- */
+async function safeParseJSON(response) {
+    const text = await response.text();
+    try {
+        return JSON.parse(text);
+    } catch {
+        return { raw: text };
+    }
+}
+
 async function startScan() {
     scanMessageEl.style.display = "none";
     resultsOutput.innerText = "";
@@ -43,7 +53,7 @@ async function startScan() {
     try {
         const response = await fetch("/scan", {
             method: "POST",
-            headers: {"Content-Type": "application/json"},
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 ip_range: ipRange,
                 gateway: gateway || null,
@@ -52,14 +62,18 @@ async function startScan() {
             })
         });
 
+        const data = await safeParseJSON(response);
+
         if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.detail || "Failed to start scan");
+            const msg =
+                data.detail ||
+                data.message ||
+                data.raw ||
+                "Internal server error";
+            throw new Error(msg);
         }
 
-        const data = await response.json();
         currentScanId = data.scan_id;
-
         displayMessage(`Scan started (ID ${currentScanId})`);
         pollInterval = setInterval(fetchResults, 3000);
 
@@ -74,18 +88,30 @@ async function fetchResults() {
 
     try {
         const response = await fetch(`/results/${currentScanId}`);
-        if (!response.ok) throw new Error("Failed to fetch results");
+        const data = await safeParseJSON(response);
 
-        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(
+                data.detail || data.raw || "Failed to fetch results"
+            );
+        }
 
-        statusOutput.innerText = JSON.stringify({
-            status: data.status,
-            mode: data.mode,
-            gateway: data.gateway,
-            created_at: data.created_at
-        }, null, 2);
+        statusOutput.innerText = JSON.stringify(
+            {
+                status: data.status,
+                mode: data.mode,
+                gateway: data.gateway,
+                created_at: data.created_at
+            },
+            null,
+            2
+        );
 
-        resultsOutput.innerText = JSON.stringify(data.results || [], null, 2);
+        resultsOutput.innerText = JSON.stringify(
+            data.results || [],
+            null,
+            2
+        );
 
         if (data.status === "completed" || data.status === "failed") {
             clearInterval(pollInterval);
