@@ -10,48 +10,85 @@
 <div class="container">
     <h1>🛰️ Live Network Scanner</h1>
 
+    <!-- Global Notice -->
     <div class="notice">
         <strong>Public Demo Notice:</strong>
-        ARP-based scanning works only on local networks.
-        Enable <b>Demo Mode</b> to see example results in cloud deployments.
+        ARP-based scanning works only on <b>local networks</b>.
+        When running in cloud or public deployments, enable
+        <b>Demo Mode</b> to view simulated scan results.
     </div>
 
+    <!-- Scan Form -->
     <div class="card">
         <h2>🚀 Start New Scan</h2>
 
         <div class="form-group">
             <label for="ipRange">IP Range (CIDR or single IP)</label>
-            <input type="text" id="ipRange" placeholder="192.168.1.0/24">
+            <input
+                type="text"
+                id="ipRange"
+                placeholder="192.168.1.0/24"
+                required
+            >
+            <small class="hint">
+                Example: <code>192.168.1.0/24</code> or <code>192.168.1.10</code>
+            </small>
         </div>
 
         <div class="form-group">
             <label for="gateway">Gateway (Optional)</label>
-            <input type="text" id="gateway" placeholder="192.168.1.1">
+            <input
+                type="text"
+                id="gateway"
+                placeholder="192.168.1.1"
+            >
+            <small class="hint">
+                Must belong to the selected IP range
+            </small>
         </div>
 
         <div class="form-group">
             <label for="ports">Ports (comma-separated)</label>
-            <input type="text" id="ports" placeholder="22,80,443">
+            <input
+                type="text"
+                id="ports"
+                placeholder="22,80,443"
+            >
+            <small class="hint">
+                Leave empty to use default ports
+            </small>
         </div>
 
         <div class="checkbox-group">
             <input type="checkbox" id="demoMode" checked>
-            <label for="demoMode">Demo mode (Recommended for cloud)</label>
+            <label for="demoMode">
+                Demo mode (Recommended for cloud / public testing)
+            </label>
         </div>
 
-        <button id="startScanButton" onclick="startScan()">Start Scan</button>
+        <button id="startScanButton" onclick="startScan()">
+            Start Scan
+        </button>
 
-        <div id="scanMessage"></div>
+        <div id="scanMessage" class="message"></div>
     </div>
 
+    <!-- Status -->
     <div class="card">
         <h2>📊 Scan Status</h2>
-        <pre id="statusOutput"></pre>
+        <pre id="statusOutput">
+{
+  "status": "Awaiting scan start..."
+}
+        </pre>
     </div>
 
+    <!-- Results -->
     <div class="card">
         <h2>📄 Scan Results</h2>
-        <pre id="resultsOutput"></pre>
+        <pre id="resultsOutput">
+[]
+        </pre>
     </div>
 </div>
 
