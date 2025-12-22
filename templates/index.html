@@ -76,11 +76,14 @@
     <!-- Status -->
     <div class="card">
         <h2>📊 Scan Status</h2>
-        <pre id="statusOutput">
-{
-  "status": "Awaiting scan start..."
-}
-        </pre>
+
+        <div id="statusBadge" class="status-badge status-idle">
+            Idle
+        </div>
+
+        <div id="spinner" class="spinner hidden"></div>
+
+        <pre id="statusOutput"></pre>
     </div>
 
     <!-- Results -->
