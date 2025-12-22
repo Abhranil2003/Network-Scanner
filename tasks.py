@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from sqlalchemy.orm import Session
 
 from database import SessionLocal
@@ -7,7 +8,13 @@ from network_scanner import scan_network
 from port_scanner import scan_ports
 
 
-def run_scan(scan_id: int, ip_range: str, ports: list[int], demo: bool = False):
+def run_scan(
+    scan_id: int,
+    ip_range: str,
+    ports: list[int],
+    gateway: str | None = None,
+    demo: bool = False
+):
     db: Session = SessionLocal()
 
     try:
@@ -15,7 +22,9 @@ def run_scan(scan_id: int, ip_range: str, ports: list[int], demo: bool = False):
         if not scan:
             return
 
+        # ---- Lifecycle: queued → running ----
         scan.status = "running"
+        scan.started_at = datetime.utcnow()
         db.commit()
 
         # ---------------- DEMO MODE ----------------
@@ -47,27 +56,25 @@ def run_scan(scan_id: int, ip_range: str, ports: list[int], demo: bool = False):
                         host_id=host_obj.id,
                         port=port
                     ))
+                db.commit()
 
             scan.status = "completed"
+            scan.completed_at = datetime.utcnow()
             db.commit()
             return
 
-        # ---------------- CLOUD ENV CHECK ----------------
+        # ---------------- CLOUD ENV SAFETY ----------------
         if os.getenv("RENDER") == "true":
             scan.mode = "cloud"
             scan.status = "completed"
+            scan.completed_at = datetime.utcnow()
             db.commit()
             return
 
         # ---------------- LIVE MODE ----------------
-        try:
-            active_hosts = scan_network(ip_range)
-            scan.mode = "live"
-        except Exception:
-            scan.mode = "cloud"
-            scan.status = "completed"
-            db.commit()
-            return
+        scan.mode = "live"
+
+        active_hosts = scan_network(ip_range)
 
         for host in active_hosts:
             host_obj = Host(
@@ -85,12 +92,16 @@ def run_scan(scan_id: int, ip_range: str, ports: list[int], demo: bool = False):
                     host_id=host_obj.id,
                     port=port
                 ))
+            db.commit()
 
         scan.status = "completed"
+        scan.completed_at = datetime.utcnow()
         db.commit()
 
-    except Exception:
+    except Exception as e:
         scan.status = "failed"
+        scan.failed_at = datetime.utcnow()
         db.commit()
+
     finally:
         db.close()
