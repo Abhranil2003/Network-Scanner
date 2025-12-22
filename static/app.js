@@ -17,7 +17,38 @@ function setButtonState(scanning) {
     startButton.innerText = scanning ? "Scanning..." : "Start Scan";
 }
 
+/* ---------- UX MESSAGE HELPERS ---------- */
+
+function getStatusMessage(status) {
+    switch (status) {
+        case "queued":
+            return "⏳ Scan queued. Preparing environment...";
+        case "running":
+            return "🔍 Scan in progress. Discovering hosts and ports...";
+        case "completed":
+            return "✅ Scan completed successfully.";
+        case "failed":
+            return "❌ Scan failed. Please try again or switch to Demo Mode.";
+        default:
+            return "ℹ️ Awaiting scan status...";
+    }
+}
+
+function getModeMessage(mode) {
+    switch (mode) {
+        case "demo":
+            return "🧪 Demo mode enabled (simulated results)";
+        case "cloud":
+            return "☁️ Cloud-safe mode (live scanning disabled)";
+        case "live":
+            return "🌐 Live network scan";
+        default:
+            return "";
+    }
+}
+
 /* ---------- SAFE RESPONSE PARSER ---------- */
+
 async function safeParseJSON(response) {
     const text = await response.text();
     try {
@@ -96,10 +127,15 @@ async function fetchResults() {
             );
         }
 
+        const statusMessage = getStatusMessage(data.status);
+        const modeMessage = getModeMessage(data.mode);
+
         statusOutput.innerText = JSON.stringify(
             {
                 status: data.status,
+                message: statusMessage,
                 mode: data.mode,
+                mode_info: modeMessage,
                 gateway: data.gateway,
                 created_at: data.created_at
             },
